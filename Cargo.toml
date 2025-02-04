@@ -1,0 +1,14 @@
+[package]
+name = "openapi31to30"
+version = "0.0.1"
+edition = "2021"
+license = "ISC"
+
+[dependencies]
+color-eyre = "0.6.3"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_yaml = "0.9.34"
+
+[dev-dependencies]
+insta = "1.42.1"
+pretty_assertions = "1.4.1"
