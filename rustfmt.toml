@@ -1,0 +1,4 @@
+max_width = 80
+
+# Unstable formats
+imports_granularity = "crate"

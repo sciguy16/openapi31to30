@@ -1,6 +1,8 @@
 use color_eyre::{eyre::eyre, Result};
 use serde::{Deserialize, Serialize};
-use serde_yaml::{Mapping, Value};
+use serde_yaml::{Mapping, Sequence, Value};
+
+mod visitor;
 
 const OPENAPI_V_303: &str = "3.0.3";
 
@@ -43,7 +45,20 @@ fn remove_licence_identifier(schema: &mut OpenApiTopLevel) -> Option<()> {
     None
 }
 
-fn convert_schema_ref(_schema: &mut OpenApiTopLevel) -> Option<()> {
+/// In a JSON Schema, replace `{ blah blah, $ref: "uri"}`
+/// with `{ blah blah, allOf: [ $ref: "uri" ]}`
+fn convert_schema_ref(schema: &mut OpenApiTopLevel) -> Option<()> {
+    visitor::walk_ref_objects(schema, |object| {
+        let ref_target = object.remove("$ref")?;
+        if !ref_target.is_string() {
+            return None;
+        }
+        let mut all_of_inner = Mapping::new();
+        all_of_inner.insert("$ref".into(), ref_target);
+        object.insert("allOf".into(), vec![Value::from(all_of_inner)].into());
+
+        None
+    });
     None
 }
 
@@ -79,6 +94,8 @@ mod test {
 
     #[test]
     fn example_from_downconvert() {
-        assert_snapshot!(convert(include_str!("../samples/downconvert.yaml")).unwrap());
+        assert_snapshot!(
+            convert(include_str!("../samples/downconvert.yaml")).unwrap()
+        );
     }
 }
