@@ -9,21 +9,26 @@ where
         return;
     };
     for component in components.values_mut() {
-        walk_object_inner(component, &mut visitor);
+        walk_object_inner(component, &mut visitor, 0);
     }
 }
 
-fn walk_object_inner(object: &mut Value, visitor: &mut dyn FnMut(&mut Value)) {
-    visitor(object);
+fn walk_object_inner(
+    object: &mut Value,
+    visitor: &mut dyn FnMut(&mut Value),
+    depth: u64,
+) {
+    dbg!(depth);
     if let Some(object) = object.as_mapping_mut() {
         for sub in object.values_mut() {
-            walk_object_inner(sub, visitor);
+            walk_object_inner(sub, visitor, depth + 1);
         }
     } else if let Some(objects) = object.as_sequence_mut() {
         for item in objects.iter_mut() {
-            walk_object_inner(item, visitor);
+            walk_object_inner(item, visitor, depth + 1);
         }
     }
+    visitor(object);
 }
 
 pub fn walk_schema_objects<F>(schema: &mut OpenApiTopLevel, mut visitor: F)
@@ -59,4 +64,74 @@ where
     };
 
     walk_objects(schema, schema_visitor);
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    const WALK_OBJECTS_TEST: &str = r#"
+openapi: 3.0.1
+components:
+  some-component:
+    some-member: game
+  other-component:
+    - other-member: {}
+"#;
+
+    #[test]
+    fn test_walk_objects() {
+        let mut keys = Vec::new();
+        let mut top = serde_yaml::from_str(WALK_OBJECTS_TEST).unwrap();
+        walk_objects(&mut top, |object| {
+            keys.push(serde_yaml::to_string(object).unwrap());
+        });
+
+        assert_eq!(
+            keys,
+            [
+                "game\n",
+                "some-member: game\n",
+                "{}\n",
+                "other-member: {}\n",
+                "- other-member: {}\n",
+            ]
+        );
+    }
+
+    const REF_OBJECTS_TEST: &str = r##"
+openapi: 3.0.1
+components:
+  some-component:
+    some-member: game
+    $ref: "#/components/refs/thing"
+  other-component:
+    - other-member: {}
+"##;
+
+    #[test]
+    fn test_ref_objects() {
+        // WALK_OBJECTS_TEST has no ref objects
+        let mut keys = Vec::new();
+        let mut top = serde_yaml::from_str(WALK_OBJECTS_TEST).unwrap();
+        walk_ref_objects(&mut top, |object| {
+            keys.push(serde_yaml::to_string(object).unwrap());
+            None
+        });
+        dbg!(&keys);
+        assert!(keys.is_empty());
+
+        let mut keys = Vec::new();
+        let mut top = serde_yaml::from_str(REF_OBJECTS_TEST).unwrap();
+        walk_ref_objects(&mut top, |object| {
+            keys.push(serde_yaml::to_string(object).unwrap());
+            None
+        });
+        dbg!(&keys);
+        assert_eq!(
+            keys,
+            ["some-member: game\n$ref: '#/components/refs/thing'\n",]
+        );
+    }
 }

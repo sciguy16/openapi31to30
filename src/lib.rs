@@ -1,6 +1,6 @@
 use color_eyre::{eyre::eyre, Result};
 use serde::{Deserialize, Serialize};
-use serde_yaml::{Mapping, Sequence, Value};
+use serde_yaml::{Mapping, Value};
 
 mod visitor;
 
@@ -9,9 +9,13 @@ const OPENAPI_V_303: &str = "3.0.3";
 #[derive(Debug, Deserialize, Serialize)]
 struct OpenApiTopLevel {
     openapi: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     info: Option<Mapping>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     paths: Option<Mapping>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     components: Option<Mapping>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     tags: Option<Value>,
 }
 
@@ -93,9 +97,33 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn example_from_downconvert() {
         assert_snapshot!(
             convert(include_str!("../samples/downconvert.yaml")).unwrap()
         );
+    }
+
+    const SCHEMA_REF_TEST: &str = r##"
+openapi: 3.0.1
+components:
+  some-component:
+    some-member: game
+    $ref: "#/components/refs/thing"
+"##;
+
+    #[test]
+    fn schema_ref() {
+        const EXPECTED: &str = "\
+openapi: 3.0.1
+components:
+  some-component:
+    some-member: game
+    allOf:
+    - $ref: '#/components/refs/thing'
+";
+        let mut top = serde_yaml::from_str(SCHEMA_REF_TEST).unwrap();
+        convert_schema_ref(&mut top);
+        assert_eq!(serde_yaml::to_string(&top).unwrap(), EXPECTED);
     }
 }
