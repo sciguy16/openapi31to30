@@ -9,23 +9,18 @@ where
         return;
     };
     for component in components.values_mut() {
-        walk_object_inner(component, &mut visitor, 0);
+        walk_object_inner(component, &mut visitor);
     }
 }
 
-fn walk_object_inner(
-    object: &mut Value,
-    visitor: &mut dyn FnMut(&mut Value),
-    depth: u64,
-) {
-    dbg!(depth);
+fn walk_object_inner(object: &mut Value, visitor: &mut dyn FnMut(&mut Value)) {
     if let Some(object) = object.as_mapping_mut() {
         for sub in object.values_mut() {
-            walk_object_inner(sub, visitor, depth + 1);
+            walk_object_inner(sub, visitor);
         }
     } else if let Some(objects) = object.as_sequence_mut() {
         for item in objects.iter_mut() {
-            walk_object_inner(item, visitor, depth + 1);
+            walk_object_inner(item, visitor);
         }
     }
     visitor(object);

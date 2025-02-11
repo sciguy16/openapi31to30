@@ -97,7 +97,7 @@ mod test {
     }
 
     #[test]
-    #[ignore]
+    // #[ignore]
     fn example_from_downconvert() {
         assert_snapshot!(
             convert(include_str!("../samples/downconvert.yaml")).unwrap()

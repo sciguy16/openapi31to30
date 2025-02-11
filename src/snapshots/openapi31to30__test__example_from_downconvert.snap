@@ -147,13 +147,17 @@ components:
       description: The unique identifier of an application. This is an opaque string.
       in: path
       required: true
-      schema: {}
+      schema:
+        allOf:
+        - $ref: '#/components/schemas/resourceId'
   responses:
     '400':
       description: Bad Request. The request body, request headers, and/or query parameters are not well-formed.
       content:
         application/problem+json:
-          schema: {}
+          schema:
+            allOf:
+            - $ref: '#/components/schemas/problemResponse'
           example:
             type: https://www.example.com/errors/badRequest
             title: Bad Request
@@ -162,7 +166,9 @@ components:
             detail: Input did not parse as JSON
             instance: https://api.example.com/example/applications/bb116eff493f4d2a91c5/preferences
         application/json:
-          schema: {}
+          schema:
+            allOf:
+            - $ref: '#/components/schemas/problemResponse'
           example:
             type: https://www.example.com/errors/badRequest
             title: Bad Request
@@ -174,7 +180,9 @@ components:
       description: Unauthorized. The operation require authentication but none was given.
       content:
         application/problem+json:
-          schema: {}
+          schema:
+            allOf:
+            - $ref: '#/components/schemas/problemResponse'
           example:
             type: https://www.example.com/errors/unauthorized
             title: Unauthorized
@@ -183,7 +191,9 @@ components:
             detail: The request lacks valid authentication credentials
             instance: https://api.example.com/example/applications/bb116eff493f4d2a91c5/preferences
         application/json:
-          schema: {}
+          schema:
+            allOf:
+            - $ref: '#/components/schemas/problemResponse'
           example:
             type: https://www.example.com/errors/unauthorized
             title: Unauthorized
@@ -195,7 +205,9 @@ components:
       description: Forbidden. The authenticated caller is not authorized to perform the requested operation.
       content:
         application/problem+json:
-          schema: {}
+          schema:
+            allOf:
+            - $ref: '#/components/schemas/problemResponse'
           example:
             type: https://www.example.com/errors/forbidden
             title: Forbidden
@@ -204,7 +216,9 @@ components:
             detail: The request has valid authentication, but the authenticated agent is forbidden from accessing this resource or operation
             instance: https://api.example.com/example/applications/bb116eff493f4d2a91c5/preferences
         application/json:
-          schema: {}
+          schema:
+            allOf:
+            - $ref: '#/components/schemas/problemResponse'
           example:
             type: https://www.example.com/errors/forbidden
             title: Forbidden
@@ -239,6 +253,8 @@ components:
         updatedAt:
           description: The date-time when this preference was last modified [RFC 3339](https://tools.ietf.org/html/rfc3339) `date-time` format. This is derived and immutable.
           example: 2023-01-06T09:39:48.375Z
+          allOf:
+          - $ref: '#/components/schemas/readOnlyResourceId'
         memo:
           description: The user-settable memo.
           type: string
@@ -258,14 +274,17 @@ components:
       description: Summary representation of a preference resource in preferences collections.
       additionalProperties: false
       allOf:
-      - {}
-      - {}
+      - allOf:
+        - $ref: '#/components/schemas/abstractBody'
+      - allOf:
+        - $ref: '#/components/schemas/preferenceFields'
       - type: object
         properties:
           id:
             description: The unique identifier for this preference resource. This is an immutable opaque string.
             allOf:
-            - {}
+            - allOf:
+              - $ref: '#/components/schemas/readOnlyResourceId'
       examples:
       - id: 88f5bf17-ecc4
         name: theme
@@ -283,13 +302,16 @@ components:
       description: The list of preferences for an application.
       additionalProperties: false
       allOf:
-      - {}
+      - allOf:
+        - $ref: '#/components/schemas/abstractBody'
       - type: object
         properties:
           items:
             description: An array containing preference items.
             type: array
-            items: {}
+            items:
+              allOf:
+              - $ref: '#/components/schemas/preferenceItem'
       example:
         items:
         - id: 88f5bf17-ecc4
@@ -308,8 +330,10 @@ components:
       description: API problem or error response, as per [RFC 7807 application/problem+json](https://tools.ietf.org/html/rfc7807).
       type: object
       allOf:
-      - {}
-      - {}
+      - allOf:
+        - $ref: '#/components/schemas/abstractBody'
+      - allOf:
+        - $ref: '#/components/schemas/apiProblem'
       example:
         type: https://www.examplecom/errors/noSuchApplication
         title: Application Not Found
@@ -329,7 +353,8 @@ components:
       description: The unique, opaque system-assigned identifier for a resource. This case-sensitive ID is also used in URLs as path parameters or in other properties or parameters that reference a resource by ID rather than URL. Resource IDs are immutable.
       readOnly: true
       allOf:
-      - {}
+      - allOf:
+        - $ref: '#/components/schemas/resourceId'
     abstractBody:
       title: Abstract Body
       description: An abstract schema used to define other request and response body model schemas.
@@ -374,13 +399,18 @@ components:
         id:
           description: The unique identifier for this problem. This is an immutable opaque string.
           allOf:
-          - {}
+          - allOf:
+            - $ref: '#/components/schemas/readOnlyResourceId'
         occurredAt:
           description: The timestamp when the problem occurred, in [RFC 3339](https://tools.ietf.org/html/rfc3339) date-time `YYYY-MM-DDThh:mm:ss.sssZ` format, UTC.
+          allOf:
+          - $ref: '#/components/schemas/readOnlyTimestamp'
         problems:
           description: Optional root-causes if there are multiple problems in the request or API call processing.
           type: array
-          items: {}
+          items:
+            allOf:
+            - $ref: '#/components/schemas/apiProblem'
         attributes:
           type: object
           description: Additional optional attributes related to the problem. This data conforms to the schema associated with the error type.
