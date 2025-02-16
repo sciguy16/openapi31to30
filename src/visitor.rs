@@ -3,7 +3,7 @@ use serde_yaml::{Mapping, Value};
 
 pub fn walk_objects<F>(schema: &mut OpenApiTopLevel, mut visitor: F)
 where
-    F: FnMut(&mut Value),
+    F: FnMut(&mut Value) -> Option<()>,
 {
     let Some(components) = schema.components.as_mut() else {
         return;
@@ -13,7 +13,10 @@ where
     }
 }
 
-fn walk_object_inner(object: &mut Value, visitor: &mut dyn FnMut(&mut Value)) {
+fn walk_object_inner(
+    object: &mut Value,
+    visitor: &mut dyn FnMut(&mut Value) -> Option<()>,
+) {
     if let Some(object) = object.as_mapping_mut() {
         for sub in object.values_mut() {
             walk_object_inner(sub, visitor);
@@ -28,7 +31,7 @@ fn walk_object_inner(object: &mut Value, visitor: &mut dyn FnMut(&mut Value)) {
 
 pub fn walk_schema_objects<F>(schema: &mut OpenApiTopLevel, mut visitor: F)
 where
-    F: FnMut(&mut Value),
+    F: FnMut(&mut Value) -> Option<()>,
 {
     let schema_visitor = move |object: &mut Value| {
         if let Some(object) = object.get_mut("schema") {
@@ -41,6 +44,7 @@ where
                 }
             }
         }
+        None
     };
 
     walk_objects(schema, schema_visitor);
@@ -56,6 +60,7 @@ where
                 visitor(object);
             }
         }
+        None
     };
 
     walk_objects(schema, schema_visitor);
@@ -81,6 +86,7 @@ components:
         let mut top = serde_yaml::from_str(WALK_OBJECTS_TEST).unwrap();
         walk_objects(&mut top, |object| {
             keys.push(serde_yaml::to_string(object).unwrap());
+            None
         });
 
         assert_eq!(

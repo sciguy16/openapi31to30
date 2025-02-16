@@ -280,7 +280,9 @@ components:
           example: '2023-01-06T09:39:48.375Z'
         memo:
           description: The user-settable memo.
-          type: string
+          type:
+            - string
+            - null
           maxLength: 80
         category:
           description: The category of the preference.

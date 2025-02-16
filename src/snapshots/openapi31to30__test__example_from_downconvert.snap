@@ -259,6 +259,7 @@ components:
           description: The user-settable memo.
           type: string
           maxLength: 80
+          nullable: true
         category:
           description: The category of the preference.
           type: string

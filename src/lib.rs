@@ -37,6 +37,7 @@ pub fn convert(schema: &str) -> Result<String> {
     schema.openapi = OPENAPI_V_303.into();
     remove_licence_identifier(&mut schema);
     convert_schema_ref(&mut schema);
+    convert_nullable_type_array(&mut schema);
 
     Ok(serde_yaml::to_string(&schema)?)
 }
@@ -51,7 +52,7 @@ fn remove_licence_identifier(schema: &mut OpenApiTopLevel) -> Option<()> {
 
 /// In a JSON Schema, replace `{ blah blah, $ref: "uri"}`
 /// with `{ blah blah, allOf: [ $ref: "uri" ]}`
-fn convert_schema_ref(schema: &mut OpenApiTopLevel) -> Option<()> {
+fn convert_schema_ref(schema: &mut OpenApiTopLevel) {
     visitor::walk_ref_objects(schema, |object| {
         let ref_target = object.remove("$ref")?;
         if !ref_target.is_string() {
@@ -63,7 +64,39 @@ fn convert_schema_ref(schema: &mut OpenApiTopLevel) -> Option<()> {
 
         None
     });
-    None
+}
+
+/// Replace
+/// ```ignore
+/// type:
+///   - string
+///   - null
+/// ```
+/// with
+/// ```ignore
+/// type: 'string'
+/// nullable: 'true'
+/// ```
+fn convert_nullable_type_array(schema: &mut OpenApiTopLevel) {
+    visitor::walk_objects(schema, |object| {
+        let types = object.as_mapping_mut()?.get_mut("type")?;
+        let types_seq = dbg!(types.as_sequence_mut()?);
+        if types_seq.len() != 2 {
+            return None;
+        }
+        let null_idx = types_seq
+            .iter()
+            .enumerate()
+            .find_map(|(idx, typ)| typ.is_null().then_some(idx))?;
+        let typ_idx = (null_idx + 1) % 2; // null_idx is 0 or 1
+        let typ = dbg!(types_seq.remove(typ_idx));
+        *types = typ;
+        object
+            .as_mapping_mut()?
+            .insert("nullable".into(), true.into());
+
+        None
+    });
 }
 
 #[cfg(test)]
@@ -97,23 +130,21 @@ mod test {
     }
 
     #[test]
-    // #[ignore]
     fn example_from_downconvert() {
         assert_snapshot!(
             convert(include_str!("../samples/downconvert.yaml")).unwrap()
         );
     }
 
-    const SCHEMA_REF_TEST: &str = r##"
+    #[test]
+    fn schema_ref() {
+        const ORIGINAL: &str = r##"
 openapi: 3.0.1
 components:
   some-component:
     some-member: game
     $ref: "#/components/refs/thing"
 "##;
-
-    #[test]
-    fn schema_ref() {
         const EXPECTED: &str = "\
 openapi: 3.0.1
 components:
@@ -122,8 +153,31 @@ components:
     allOf:
     - $ref: '#/components/refs/thing'
 ";
-        let mut top = serde_yaml::from_str(SCHEMA_REF_TEST).unwrap();
+        let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_schema_ref(&mut top);
+        assert_eq!(serde_yaml::to_string(&top).unwrap(), EXPECTED);
+    }
+
+    #[test]
+    fn test_nullable_type() {
+        const ORIGINAL: &str = "
+openapi: 3.0.1
+components:
+  some-component:
+    schema:
+      type:
+        - string
+        - null";
+        const EXPECTED: &str = "\
+openapi: 3.0.1
+components:
+  some-component:
+    schema:
+      type: string
+      nullable: true
+";
+        let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
+        convert_nullable_type_array(&mut top);
         assert_eq!(serde_yaml::to_string(&top).unwrap(), EXPECTED);
     }
 }
