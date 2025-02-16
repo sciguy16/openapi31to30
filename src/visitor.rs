@@ -29,6 +29,7 @@ fn walk_object_inner(
     visitor(object);
 }
 
+#[expect(dead_code)]
 pub fn walk_schema_objects<F>(schema: &mut OpenApiTopLevel, mut visitor: F)
 where
     F: FnMut(&mut Value) -> Option<()>,
