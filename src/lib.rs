@@ -38,6 +38,7 @@ pub fn convert(schema: &str) -> Result<String> {
     remove_licence_identifier(&mut schema);
     convert_schema_ref(&mut schema);
     convert_nullable_type_array(&mut schema);
+    convert_const_to_enum(&mut schema);
 
     Ok(serde_yaml::to_string(&schema)?)
 }
@@ -61,7 +62,7 @@ fn convert_schema_ref(schema: &mut OpenApiTopLevel) {
         let mut all_of_inner = Mapping::new();
         all_of_inner.insert("$ref".into(), ref_target);
         object.insert("allOf".into(), vec![Value::from(all_of_inner)].into());
-
+        println!("Convert ref URI to allOf");
         None
     });
 }
@@ -94,7 +95,22 @@ fn convert_nullable_type_array(schema: &mut OpenApiTopLevel) {
         object
             .as_mapping_mut()?
             .insert("nullable".into(), true.into());
+        println!("Convert types array to be nullable");
+        None
+    });
+}
 
+/**
+ * OpenAPI 3.1 uses JSON Schema 2020-12 which allows `const`
+ * OpenAPI 3.0 uses JSON Scheme Draft 7 which only allows `enum`.
+ * Replace all `const: value` with `enum: [ value ]`
+ */
+fn convert_const_to_enum(schema: &mut OpenApiTopLevel) {
+    visitor::walk_schema_objects(schema, |object| {
+        let object = object.as_mapping_mut()?;
+        let constant = object.remove("const")?;
+        println!("Convert const `{constant:?}` to enum");
+        object.insert("enum".into(), vec![constant].into());
         None
     });
 }
@@ -178,6 +194,28 @@ components:
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_nullable_type_array(&mut top);
+        assert_eq!(serde_yaml::to_string(&top).unwrap(), EXPECTED);
+    }
+
+    #[test]
+    fn test_const_enum() {
+        const ORIGINAL: &str = "
+openapi: 3.0.1
+components:
+  some-component:
+    schema:
+      const: string
+";
+        const EXPECTED: &str = "\
+openapi: 3.0.1
+components:
+  some-component:
+    schema:
+      enum:
+      - string
+";
+        let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
+        convert_const_to_enum(&mut top);
         assert_eq!(serde_yaml::to_string(&top).unwrap(), EXPECTED);
     }
 }
