@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::openapi::OpenApi;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
+mod multipart;
 mod nullable;
 mod path;
 mod verbs;
@@ -76,4 +77,17 @@ fn nullable() {
     let converted = convert(&yaml).unwrap();
     insta::assert_snapshot!("nullable-converted", &converted);
     progenitor_test(&converted);
+}
+
+#[test]
+fn multipart() {
+    let (_router, api): (axum::Router, OpenApi) = OpenApiRouter::new()
+        .routes(routes!(multipart::post_user))
+        .split_for_parts();
+    let yaml = serde_yaml::to_string(&api).unwrap();
+    insta::assert_snapshot!("multipart-before", &yaml);
+    let converted = convert(&yaml).unwrap();
+    insta::assert_snapshot!("multipart-converted", &converted);
+    // https://github.com/oxidecomputer/progenitor/issues/518
+    // progenitor_test(&converted);
 }
