@@ -2,6 +2,9 @@ use color_eyre::{eyre::eyre, Result};
 use serde::{Deserialize, Serialize};
 use serde_yaml::{Mapping, Value};
 
+#[cfg(test)]
+mod utoipa_tests;
+
 mod visitor;
 
 const OPENAPI_V_303: &str = "3.0.3";
@@ -124,7 +127,7 @@ mod test {
     /// Basic test to ensure that progenitor can parse the converted
     /// schema. We don't snapshot test its output as we don't want to
     /// break our tests when progenitor's implementation details change
-    fn progenitor_test(spec: &str) {
+    pub(crate) fn progenitor_test(spec: &str) {
         let spec = serde_yaml::from_str(spec).expect("YAML parse");
         let mut generator = progenitor::Generator::default();
 
