@@ -88,10 +88,10 @@ fn convert_nullable_type_array(schema: &mut OpenApiTopLevel) {
         if types_seq.len() != 2 {
             return None;
         }
-        let null_idx = types_seq
-            .iter()
-            .enumerate()
-            .find_map(|(idx, typ)| typ.is_null().then_some(idx))?;
+        let null_idx =
+            types_seq.iter().enumerate().find_map(|(idx, typ)| {
+                (typ.is_null() || typ == "null").then_some(idx)
+            })?;
         let typ_idx = (null_idx + 1) % 2; // null_idx is 0 or 1
         let typ = dbg!(types_seq.remove(typ_idx));
         *types = typ;
@@ -200,7 +200,7 @@ components:
     }
 
     #[test]
-    fn test_nullable_type() {
+    fn test_nullable_type_0() {
         const ORIGINAL: &str = "
 openapi: 3.0.1
 info:
@@ -224,6 +224,55 @@ components:
     schema:
       type: string
       nullable: true
+";
+        let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
+        convert_nullable_type_array(&mut top);
+        let out = serde_yaml::to_string(&top).unwrap();
+        assert_eq!(out, EXPECTED);
+        progenitor_test(&out);
+    }
+
+    #[test]
+    fn test_nullable_type_1() {
+        const ORIGINAL: &str = "
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
+components:
+  schemas:
+    UserWithNullableField:
+      type: object
+      required:
+      - id
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type:
+          - string
+          - 'null'";
+        const EXPECTED: &str = "\
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
+components:
+  schemas:
+    UserWithNullableField:
+      type: object
+      required:
+      - id
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+          nullable: true
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_nullable_type_array(&mut top);
