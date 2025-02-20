@@ -12,3 +12,4 @@ serde_yaml = "0.9.34"
 [dev-dependencies]
 insta = "1.42.1"
 pretty_assertions = "1.4.1"
+progenitor = "0.9.1"

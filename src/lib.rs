@@ -121,6 +121,18 @@ mod test {
     use insta::assert_snapshot;
     use pretty_assertions::assert_eq;
 
+    /// Basic test to ensure that progenitor can parse the converted
+    /// schema. We don't snapshot test its output as we don't want to
+    /// break our tests when progenitor's implementation details change
+    fn progenitor_test(spec: &str) {
+        let spec = serde_yaml::from_str(spec).expect("YAML parse");
+        let mut generator = progenitor::Generator::default();
+
+        let _tokens = generator
+            .generate_tokens(&spec)
+            .expect("Progenitor generate");
+    }
+
     #[test]
     fn schema_versions() {
         assert_eq!(
@@ -147,15 +159,19 @@ mod test {
 
     #[test]
     fn example_from_downconvert() {
-        assert_snapshot!(
-            convert(include_str!("../samples/downconvert.yaml")).unwrap()
-        );
+        let out = convert(include_str!("../samples/downconvert.yaml")).unwrap();
+        assert_snapshot!(out);
+        progenitor_test(&out);
     }
 
     #[test]
     fn schema_ref() {
         const ORIGINAL: &str = r##"
 openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
 components:
   some-component:
     some-member: game
@@ -163,6 +179,10 @@ components:
 "##;
         const EXPECTED: &str = "\
 openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
 components:
   some-component:
     some-member: game
@@ -171,13 +191,19 @@ components:
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_schema_ref(&mut top);
-        assert_eq!(serde_yaml::to_string(&top).unwrap(), EXPECTED);
+        let out = serde_yaml::to_string(&top).unwrap();
+        assert_eq!(out, EXPECTED);
+        progenitor_test(&out);
     }
 
     #[test]
     fn test_nullable_type() {
         const ORIGINAL: &str = "
 openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
 components:
   some-component:
     schema:
@@ -186,6 +212,10 @@ components:
         - null";
         const EXPECTED: &str = "\
 openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
 components:
   some-component:
     schema:
@@ -194,13 +224,19 @@ components:
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_nullable_type_array(&mut top);
-        assert_eq!(serde_yaml::to_string(&top).unwrap(), EXPECTED);
+        let out = serde_yaml::to_string(&top).unwrap();
+        assert_eq!(out, EXPECTED);
+        progenitor_test(&out);
     }
 
     #[test]
     fn test_const_enum() {
         const ORIGINAL: &str = "
 openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
 components:
   some-component:
     schema:
@@ -208,6 +244,10 @@ components:
 ";
         const EXPECTED: &str = "\
 openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
 components:
   some-component:
     schema:
@@ -216,6 +256,8 @@ components:
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_const_to_enum(&mut top);
-        assert_eq!(serde_yaml::to_string(&top).unwrap(), EXPECTED);
+        let out = serde_yaml::to_string(&top).unwrap();
+        assert_eq!(out, EXPECTED);
+        progenitor_test(&out);
     }
 }

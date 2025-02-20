@@ -35,7 +35,7 @@ paths:
             Filter preferences to only those whose `category` is in this
             pipe-separated list.
           in: query
-          style: pipeDelimited
+          style: form
           schema:
             type: array
             minItems: 1
@@ -51,7 +51,7 @@ paths:
             Filter preferences only those whose `type` is in this pipe-separated
             list.
           in: query
-          style: pipeDelimited
+          style: form
           schema:
             type: array
             minItems: 1
@@ -110,7 +110,7 @@ paths:
             Filter preferences to only those whose `category` is in this
             pipe-separated list.
           in: query
-          style: pipeDelimited
+          style: form
           schema:
             type: array
             minItems: 1
@@ -126,7 +126,7 @@ paths:
             Filter preferences only those whose `type` is in this pipe-separated
             list.
           in: query
-          style: pipeDelimited
+          style: form
           schema:
             type: array
             minItems: 1
