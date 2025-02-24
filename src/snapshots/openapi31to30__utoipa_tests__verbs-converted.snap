@@ -82,3 +82,8 @@ components:
         id:
           type: integer
           format: int32
+        number:
+          type: integer
+          format: int32
+          description: nullable field with docs
+          nullable: true

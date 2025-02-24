@@ -48,7 +48,11 @@ components:
       type: object
       required:
       - id
+      - field
       properties:
+        field:
+          type: string
+          description: field with some documentation
         id:
           type: integer
           format: int32

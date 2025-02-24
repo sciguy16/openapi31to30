@@ -42,6 +42,7 @@ pub fn convert(schema: &str) -> Result<String> {
     convert_schema_ref(&mut schema);
     convert_nullable_type_array(&mut schema);
     convert_const_to_enum(&mut schema);
+    convert_nullable_oneof(&mut schema);
 
     Ok(serde_yaml::to_string(&schema)?)
 }
@@ -84,7 +85,7 @@ fn convert_schema_ref(schema: &mut OpenApiTopLevel) {
 fn convert_nullable_type_array(schema: &mut OpenApiTopLevel) {
     visitor::walk_objects(schema, |object| {
         let types = object.as_mapping_mut()?.get_mut("type")?;
-        let types_seq = dbg!(types.as_sequence_mut()?);
+        let types_seq = types.as_sequence_mut()?;
         if types_seq.len() != 2 {
             return None;
         }
@@ -93,7 +94,7 @@ fn convert_nullable_type_array(schema: &mut OpenApiTopLevel) {
                 (typ.is_null() || typ == "null").then_some(idx)
             })?;
         let typ_idx = (null_idx + 1) % 2; // null_idx is 0 or 1
-        let typ = dbg!(types_seq.remove(typ_idx));
+        let typ = types_seq.remove(typ_idx);
         *types = typ;
         object
             .as_mapping_mut()?
@@ -114,6 +115,43 @@ fn convert_const_to_enum(schema: &mut OpenApiTopLevel) {
         let constant = object.remove("const")?;
         println!("Convert const `{constant:?}` to enum");
         object.insert("enum".into(), vec![constant].into());
+        None
+    });
+}
+
+/// Another nullable type represenation is oneOf
+fn convert_nullable_oneof(schema: &mut OpenApiTopLevel) {
+    visitor::walk_objects(schema, |object| {
+        let object = object.as_mapping_mut()?;
+        let mut one_of = object.remove("oneOf")?;
+        let one_of_seq = one_of.as_sequence_mut()?;
+        if one_of_seq.len() != 2 {
+            return None;
+        }
+        let null_idx =
+            one_of_seq.iter().enumerate().find_map(|(idx, typ)| {
+                let typ = typ.as_mapping()?.get("type")?;
+                (typ.is_null() || typ == "null").then_some(idx)
+            })?;
+        let typ_idx = (null_idx + 1) % 2; // null_idx is 0 or 1
+        let mut typ = one_of_seq.remove(typ_idx);
+        let typ = typ.as_mapping_mut()?;
+        dbg!(&typ);
+        if let Some(description) = typ.remove("description") {
+            object.insert("description".into(), description);
+        }
+        let mut allof = typ.remove("allOf")?;
+        let allof = allof.as_sequence_mut()?;
+        dbg!(&allof);
+        if allof.len() != 1 {
+            return None;
+        }
+        let allof = allof.remove(0);
+        if allof.as_mapping()?.contains_key("$ref") {
+            object.insert("schema".into(), allof);
+            object.insert("nullable".into(), true.into());
+        }
+
         None
     });
 }
@@ -308,6 +346,42 @@ components:
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_const_to_enum(&mut top);
+        let out = serde_yaml::to_string(&top).unwrap();
+        assert_eq!(out, EXPECTED);
+        progenitor_test(&out);
+    }
+
+    #[test]
+    fn test_nullable_oneof() {
+        const ORIGINAL: &str = "
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
+components:
+  some-component:
+    oneOf:
+    - type: 'null'
+    - description: 'things'
+      allOf:
+      - $ref: '#/components/schemas/thing'
+";
+        const EXPECTED: &str = "\
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths: {}
+components:
+  some-component:
+    description: things
+    schema:
+      $ref: '#/components/schemas/thing'
+    nullable: true
+";
+        let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
+        convert_nullable_oneof(&mut top);
         let out = serde_yaml::to_string(&top).unwrap();
         assert_eq!(out, EXPECTED);
         progenitor_test(&out);

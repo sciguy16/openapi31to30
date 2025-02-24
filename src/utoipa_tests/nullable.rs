@@ -16,5 +16,9 @@ pub async fn put_user(
 pub async fn post_user(
     Json(_user): Json<UserWithNullableField>,
 ) -> Json<UserWithNullableField> {
-    Json(UserWithNullableField { id: 1, name: None })
+    Json(UserWithNullableField {
+        id: 1,
+        name: None,
+        field: String::new(),
+    })
 }

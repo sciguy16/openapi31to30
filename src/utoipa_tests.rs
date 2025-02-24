@@ -11,12 +11,16 @@ mod verbs;
 #[derive(utoipa::ToSchema, Deserialize, Serialize)]
 struct User {
     id: i32,
+    /// nullable field with docs
+    number: Option<i32>,
 }
 
 #[derive(utoipa::ToSchema, Deserialize, Serialize)]
 struct UserWithNullableField {
     id: i32,
     name: Option<String>,
+    /// field with some documentation
+    field: String,
 }
 
 #[test]

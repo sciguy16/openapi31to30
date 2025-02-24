@@ -16,5 +16,9 @@ struct UserForm {
     request_body(content = UserForm, content_type = "multipart/form-data"),
     responses((status = OK, body = UserWithNullableField)))]
 pub async fn post_user(_: Multipart) -> Json<UserWithNullableField> {
-    Json(UserWithNullableField { id: 1, name: None })
+    Json(UserWithNullableField {
+        id: 1,
+        name: None,
+        field: String::new(),
+    })
 }

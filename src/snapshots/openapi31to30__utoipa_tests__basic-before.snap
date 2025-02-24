@@ -34,3 +34,9 @@ components:
         id:
           type: integer
           format: int32
+        number:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: nullable field with docs
