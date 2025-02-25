@@ -123,6 +123,22 @@ fn convert_const_to_enum(schema: &mut OpenApiTopLevel) {
 fn convert_nullable_oneof(schema: &mut OpenApiTopLevel) {
     visitor::walk_objects(schema, |object| {
         let object = object.as_mapping_mut()?;
+
+        // pre-filter so that we don't remove regular enums
+        if let Some(object) = object.get("oneOf") {
+            if let Some(seq) = object.as_sequence() {
+                if seq.len() != 2
+                    || !seq.iter().any(|item| {
+                        item.as_mapping()
+                            .and_then(|item| item.get("type"))
+                            .is_some_and(|value| value == "null")
+                    })
+                {
+                    return None;
+                }
+            }
+        }
+
         let mut one_of = object.remove("oneOf")?;
         let one_of_seq = one_of.as_sequence_mut()?;
         if one_of_seq.len() != 2 {
@@ -366,6 +382,10 @@ components:
     - description: 'things'
       allOf:
       - $ref: '#/components/schemas/thing'
+  enum-component:
+    oneOf:
+      - type: string
+      - type: integer
 ";
         const EXPECTED: &str = "\
 openapi: 3.0.1
@@ -379,6 +399,10 @@ components:
     schema:
       $ref: '#/components/schemas/thing'
     nullable: true
+  enum-component:
+    oneOf:
+    - type: string
+    - type: integer
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_nullable_oneof(&mut top);
