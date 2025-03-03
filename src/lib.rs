@@ -39,7 +39,7 @@ pub fn convert(schema: &str) -> Result<String> {
 
     schema.openapi = OPENAPI_V_303.into();
     remove_licence_identifier(&mut schema);
-    convert_schema_ref(&mut schema);
+    // convert_schema_ref(&mut schema);
     convert_nullable_type_array(&mut schema);
     convert_const_to_enum(&mut schema);
     convert_nullable_oneof(&mut schema);
@@ -57,6 +57,7 @@ fn remove_licence_identifier(schema: &mut OpenApiTopLevel) -> Option<()> {
 
 /// In a JSON Schema, replace `{ blah blah, $ref: "uri"}`
 /// with `{ blah blah, allOf: [ $ref: "uri" ]}`
+#[allow(unused)]
 fn convert_schema_ref(schema: &mut OpenApiTopLevel) {
     visitor::walk_ref_objects(schema, |object| {
         let ref_target = object.remove("$ref")?;
@@ -327,6 +328,62 @@ components:
         name:
           type: string
           nullable: true
+";
+        let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
+        convert_nullable_type_array(&mut top);
+        let out = serde_yaml::to_string(&top).unwrap();
+        assert_eq!(out, EXPECTED);
+        progenitor_test(&out);
+    }
+
+    #[test]
+    fn test_nullable_type_2() {
+        const ORIGINAL: &str = "
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths:
+  /some-path/{param}:
+    get:
+      description: game
+      operationId: game
+      parameters:
+        - name: param
+          in: path
+          schema:
+            type:
+              - integer
+              - 'null'
+          description: game
+          required: true
+      responses:
+        '200':
+          description: game
+components: {}
+";
+        const EXPECTED: &str = "\
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths:
+  /some-path/{param}:
+    get:
+      description: game
+      operationId: game
+      parameters:
+      - name: param
+        in: path
+        schema:
+          type: integer
+          nullable: true
+        description: game
+        required: true
+      responses:
+        '200':
+          description: game
+components: {}
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_nullable_type_array(&mut top);

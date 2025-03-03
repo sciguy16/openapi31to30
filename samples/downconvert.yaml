@@ -147,6 +147,14 @@ paths:
                 contentMediaType: application/pdf
                 contentEncoding: base64
                 maxLength: 5000000
+  /some-path:
+    parameters:
+      - name: param
+        schema:
+          type:
+            - integer
+            - 'null'
+          format: date
 components:
   securitySchemes:
     accessToken:

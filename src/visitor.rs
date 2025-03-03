@@ -5,12 +5,16 @@ pub fn walk_objects<F>(schema: &mut OpenApiTopLevel, mut visitor: F)
 where
     F: FnMut(&mut Value) -> Option<()>,
 {
-    let Some(components) = schema.components.as_mut() else {
-        return;
+    if let Some(components) = schema.components.as_mut() {
+        for component in components.values_mut() {
+            walk_object_inner(component, &mut visitor);
+        }
     };
-    for component in components.values_mut() {
-        walk_object_inner(component, &mut visitor);
-    }
+    if let Some(paths) = schema.paths.as_mut() {
+        for path in paths.values_mut() {
+            walk_object_inner(path, &mut visitor);
+        }
+    };
 }
 
 fn walk_object_inner(
