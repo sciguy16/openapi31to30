@@ -36,10 +36,6 @@ paths:
           type: array
           minItems: 1
           maxItems: 16
-          examples:
-          - - Presentation
-          - - Presentation
-            - Notifications
           items:
             type: string
       - name: type
@@ -105,10 +101,6 @@ paths:
           type: array
           minItems: 1
           maxItems: 16
-          examples:
-          - - Presentation
-          - - Presentation
-            - Notifications
           items:
             type: string
       - name: type
@@ -282,18 +274,6 @@ components:
             description: The unique identifier for this preference resource. This is an immutable opaque string.
             allOf:
             - $ref: '#/components/schemas/readOnlyResourceId'
-      examples:
-      - id: 88f5bf17-ecc4
-        name: theme
-        value: dark
-        updatedAt: 2023-01-06T09:46:06.375Z
-        memo: I like dark themes
-        category: Presentation
-      - id: fdde09c08d689c7ac5d4
-        name: layout
-        value: dense
-        updatedAt: 2023-01-06T09:48:38.375Z
-        category: Presentation
     preferences:
       title: List of Preferences
       description: The list of preferences for an application.

@@ -157,15 +157,19 @@ fn convert_nullable_oneof(schema: &mut OpenApiTopLevel) {
         if let Some(description) = typ.remove("description") {
             object.insert("description".into(), description);
         }
-        let mut allof = typ.remove("allOf")?;
-        let allof = allof.as_sequence_mut()?;
-        dbg!(&allof);
-        if allof.len() != 1 {
-            return None;
-        }
-        let allof = allof.remove(0);
-        if allof.as_mapping()?.contains_key("$ref") {
-            object.insert("schema".into(), allof);
+        if let Some(mut allof) = typ.remove("allOf") {
+            let allof = allof.as_sequence_mut()?;
+            dbg!(&allof);
+            if allof.len() != 1 {
+                return None;
+            }
+            let allof = allof.remove(0);
+            if allof.as_mapping()?.contains_key("$ref") {
+                object.insert("schema".into(), allof);
+                object.insert("nullable".into(), true.into());
+            }
+        } else if let Some(ref_) = typ.remove("$ref") {
+            object.insert("$ref".into(), ref_);
             object.insert("nullable".into(), true.into());
         }
 
@@ -387,6 +391,77 @@ components: {}
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_nullable_type_array(&mut top);
+        let out = serde_yaml::to_string(&top).unwrap();
+        assert_eq!(out, EXPECTED);
+        progenitor_test(&out);
+    }
+
+    #[test]
+    fn test_nullable_type_3() {
+        const ORIGINAL: &str = "
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths:
+  /some-path/{param}:
+    get:
+      description: game
+      operationId: game
+      parameters:
+        - name: param
+          in: path
+          schema:
+            type: object
+            properties:
+              some-prop:
+                oneOf:
+                  - type: 'null'
+                  - $ref: '#/components/thing'
+                    description: hi
+          description: game
+          required: true
+      responses:
+        '200':
+          description: game
+components:
+  thing:
+    schema:
+      const: string
+";
+        const EXPECTED: &str = "\
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths:
+  /some-path/{param}:
+    get:
+      description: game
+      operationId: game
+      parameters:
+      - name: param
+        in: path
+        schema:
+          type: object
+          properties:
+            some-prop:
+              description: hi
+              $ref: '#/components/thing'
+              nullable: true
+        description: game
+        required: true
+      responses:
+        '200':
+          description: game
+components:
+  thing:
+    schema:
+      const: string
+";
+        let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
+        convert_nullable_type_array(&mut top);
+        convert_nullable_oneof(&mut top);
         let out = serde_yaml::to_string(&top).unwrap();
         assert_eq!(out, EXPECTED);
         progenitor_test(&out);
