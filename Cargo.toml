@@ -3,6 +3,8 @@ name = "openapi31to30"
 version = "0.0.1"
 edition = "2021"
 license = "ISC"
+description = "Convert OpenAPI schemas from 3.1 to 3.0"
+repository = "https://github.com/sciguy16/openapi31to30"
 
 [dependencies]
 color-eyre = "0.6.3"
