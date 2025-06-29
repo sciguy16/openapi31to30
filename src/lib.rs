@@ -41,6 +41,7 @@ pub fn convert(schema: &str) -> Result<String> {
     remove_licence_identifier(&mut schema);
     // convert_schema_ref(&mut schema);
     convert_nullable_type_array(&mut schema);
+    convert_nullable_type_null(&mut schema);
     convert_const_to_enum(&mut schema);
     convert_nullable_oneof(&mut schema);
 
@@ -101,6 +102,38 @@ fn convert_nullable_type_array(schema: &mut OpenApiTopLevel) {
             .as_mapping_mut()?
             .insert("nullable".into(), true.into());
         println!("Convert types array to be nullable");
+        None
+    });
+}
+
+/// Replace
+/// ```ignore
+/// type: null
+/// ```
+/// with a schema where null is the only valid value:
+/// ```ignore
+/// type: 'string'
+/// enum: []
+/// nullable: 'true'
+/// ```
+fn convert_nullable_type_null(schema: &mut OpenApiTopLevel) {
+    visitor::walk_objects(schema, |object| {
+        let type_ = object.as_mapping_mut()?.get_mut("type")?;
+        if type_ != "null" {
+            return None;
+        }
+        object.as_mapping_mut()?.remove("type");
+        object
+            .as_mapping_mut()?
+            .insert("type".into(), "string".into());
+        let empty_enum = Value::Sequence(vec![]);
+        object
+            .as_mapping_mut()?
+            .insert("enum".into(), empty_enum);
+        object
+            .as_mapping_mut()?
+            .insert("nullable".into(), true.into());
+        println!("Convert type null to be a null value");
         None
     });
 }
