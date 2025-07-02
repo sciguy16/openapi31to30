@@ -16,5 +16,5 @@ axum = { version = "0.8.4", features = ["multipart"] }
 insta = "1.43.1"
 pretty_assertions = "1.4.1"
 progenitor = "0.9.1"
-utoipa = { version = "5.3.1", features = ["axum_extras"] }
+utoipa = { version = "5.4.0", features = ["axum_extras"] }
 utoipa-axum = "0.2.0"
