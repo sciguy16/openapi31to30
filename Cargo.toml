@@ -12,7 +12,7 @@ serde = { version = "1.0.217", features = ["derive"] }
 serde_yaml = "0.9.34"
 
 [dev-dependencies]
-axum = { version = "0.8.1", features = ["multipart"] }
+axum = { version = "0.8.4", features = ["multipart"] }
 insta = "1.43.1"
 pretty_assertions = "1.4.1"
 progenitor = "0.9.1"
