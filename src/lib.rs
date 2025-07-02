@@ -74,13 +74,13 @@ fn convert_schema_ref(schema: &mut OpenApiTopLevel) {
 }
 
 /// Replace
-/// ```ignore
+/// ```yaml
 /// type:
 ///   - string
 ///   - null
 /// ```
 /// with
-/// ```ignore
+/// ```yaml
 /// type: 'string'
 /// nullable: 'true'
 /// ```
@@ -107,11 +107,11 @@ fn convert_nullable_type_array(schema: &mut OpenApiTopLevel) {
 }
 
 /// Replace
-/// ```ignore
+/// ```yaml
 /// type: null
 /// ```
 /// with a schema where null is the only valid value:
-/// ```ignore
+/// ```yaml
 /// type: 'string'
 /// enum: []
 /// nullable: 'true'
@@ -288,6 +288,50 @@ components:
         let out = serde_yaml::to_string(&top).unwrap();
         assert_eq!(out, EXPECTED);
         progenitor_test(&out);
+    }
+
+    #[test]
+    fn schema_ref_parameters() {
+        const ORIGINAL: &str = "
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths:
+  /some-path:
+    parameters:
+      - $ref: '#components/parameters/a-param'
+components:
+  parameters:
+    a-param:
+      in: query
+      name: a-param
+      schema:
+        type: string
+";
+        const EXPECTED: &str = "\
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths:
+  /some-path:
+    parameters:
+    - allOf:
+      - $ref: '#components/parameters/a-param'
+components:
+  parameters:
+    a-param:
+      in: query
+      name: a-param
+      schema:
+        type: string
+";
+        let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
+        convert_schema_ref(&mut top);
+        let out = serde_yaml::to_string(&top).unwrap();
+        assert_eq!(out, EXPECTED);
+        progenitor_test(ORIGINAL);
     }
 
     #[test]

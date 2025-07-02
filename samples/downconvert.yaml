@@ -150,12 +150,13 @@ paths:
                 maxLength: 5000000
   /some-path:
     parameters:
-      - name: param
-        schema:
-          type:
-            - integer
-            - 'null'
-          format: date
+    - name: param
+      in: query
+      schema:
+        type:
+        - integer
+        - 'null'
+        format: date
 components:
   securitySchemes:
     accessToken:

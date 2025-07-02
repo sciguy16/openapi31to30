@@ -130,6 +130,7 @@ paths:
   /some-path:
     parameters:
     - name: param
+      in: query
       schema:
         type: integer
         format: date
