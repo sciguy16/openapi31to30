@@ -13,7 +13,7 @@ serde_yaml = "0.9.34"
 
 [dev-dependencies]
 axum = { version = "0.8.1", features = ["multipart"] }
-insta = "1.42.1"
+insta = "1.43.1"
 pretty_assertions = "1.4.1"
 progenitor = "0.9.1"
 utoipa = { version = "5.3.1", features = ["axum_extras"] }
