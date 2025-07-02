@@ -74,13 +74,13 @@ fn convert_schema_ref(schema: &mut OpenApiTopLevel) {
 }
 
 /// Replace
-/// ```ignore
+/// ```yaml
 /// type:
 ///   - string
 ///   - null
 /// ```
 /// with
-/// ```ignore
+/// ```yaml
 /// type: 'string'
 /// nullable: 'true'
 /// ```
@@ -107,11 +107,11 @@ fn convert_nullable_type_array(schema: &mut OpenApiTopLevel) {
 }
 
 /// Replace
-/// ```ignore
+/// ```yaml
 /// type: null
 /// ```
 /// with a schema where null is the only valid value:
-/// ```ignore
+/// ```yaml
 /// type: 'string'
 /// enum: []
 /// nullable: 'true'
@@ -127,9 +127,7 @@ fn convert_nullable_type_null(schema: &mut OpenApiTopLevel) {
             .as_mapping_mut()?
             .insert("type".into(), "string".into());
         let empty_enum = Value::Sequence(vec![]);
-        object
-            .as_mapping_mut()?
-            .insert("enum".into(), empty_enum);
+        object.as_mapping_mut()?.insert("enum".into(), empty_enum);
         object
             .as_mapping_mut()?
             .insert("nullable".into(), true.into());
@@ -219,6 +217,7 @@ mod test {
     /// Basic test to ensure that progenitor can parse the converted
     /// schema. We don't snapshot test its output as we don't want to
     /// break our tests when progenitor's implementation details change
+    #[track_caller]
     pub(crate) fn progenitor_test(spec: &str) {
         let spec = serde_yaml::from_str(spec).expect("YAML parse");
         let mut generator = progenitor::Generator::default();
@@ -289,6 +288,50 @@ components:
         let out = serde_yaml::to_string(&top).unwrap();
         assert_eq!(out, EXPECTED);
         progenitor_test(&out);
+    }
+
+    #[test]
+    fn schema_ref_parameters() {
+        const ORIGINAL: &str = "
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths:
+  /some-path:
+    parameters:
+      - $ref: '#components/parameters/a-param'
+components:
+  parameters:
+    a-param:
+      in: query
+      name: a-param
+      schema:
+        type: string
+";
+        const EXPECTED: &str = "\
+openapi: 3.0.1
+info:
+  title: a schema
+  version: '1.0'
+paths:
+  /some-path:
+    parameters:
+    - allOf:
+      - $ref: '#components/parameters/a-param'
+components:
+  parameters:
+    a-param:
+      in: query
+      name: a-param
+      schema:
+        type: string
+";
+        let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
+        convert_schema_ref(&mut top);
+        let out = serde_yaml::to_string(&top).unwrap();
+        assert_eq!(out, EXPECTED);
+        progenitor_test(ORIGINAL);
     }
 
     #[test]
@@ -450,7 +493,7 @@ paths:
               some-prop:
                 oneOf:
                   - type: 'null'
-                  - $ref: '#/components/thing'
+                  - $ref: '#/components/schemas/thing'
                     description: hi
           description: game
           required: true
@@ -458,9 +501,9 @@ paths:
         '200':
           description: game
 components:
-  thing:
-    schema:
-      const: string
+  schemas:
+    thing:
+      type: string
 ";
         const EXPECTED: &str = "\
 openapi: 3.0.1
@@ -480,7 +523,7 @@ paths:
           properties:
             some-prop:
               description: hi
-              $ref: '#/components/thing'
+              $ref: '#/components/schemas/thing'
               nullable: true
         description: game
         required: true
@@ -488,9 +531,9 @@ paths:
         '200':
           description: game
 components:
-  thing:
-    schema:
-      const: string
+  schemas:
+    thing:
+      type: string
 ";
         let mut top = serde_yaml::from_str(ORIGINAL).unwrap();
         convert_nullable_type_array(&mut top);
